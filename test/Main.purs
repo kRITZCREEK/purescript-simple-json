@@ -14,6 +14,7 @@ import Data.List (List(..))
 import Data.List.NonEmpty (NonEmptyList(..))
 import Data.Maybe (Maybe)
 import Data.NonEmpty (NonEmpty(..))
+import Data.Nullable (Nullable)
 import Data.StrMap (StrMap)
 import Partial.Unsafe (unsafePartial)
 import Simple.JSON (class ReadForeign, class WriteForeign, readJSON, writeJSON)
@@ -48,21 +49,26 @@ type MyTestStrMap =
   , b :: StrMap Int
   }
 
-type MyTestMaybe = 
-  { a :: Maybe String 
+type MyTestMaybe =
+  { a :: Maybe String
   }
 
-type MyTestManyMaybe = 
+type MyTestManyMaybe =
   { a         :: Maybe String
-  , aNull     :: Maybe String 
-  , b         :: Maybe Int 
-  , bNull     :: Maybe Int 
-  , c         :: Maybe Boolean 
-  , cNull     :: Maybe Boolean 
+  , aNull     :: Maybe String
+  , b         :: Maybe Int
+  , bNull     :: Maybe Int
+  , c         :: Maybe Boolean
+  , cNull     :: Maybe Boolean
   , d         :: Maybe Number
-  , dNull     :: Maybe Number 
+  , dNull     :: Maybe Number
   , e         :: Maybe (Array (Maybe String))
   , eNull     :: Maybe (Array (Maybe String))
+  }
+
+type MyTestNullable =
+  { a :: Nullable String
+  , b :: Nullable String
   }
 
 
@@ -91,7 +97,7 @@ main = run [consoleReporter] do
       (unsafePartial $ fromLeft result) `shouldEqual`
         (NonEmptyList (NonEmpty (ErrorAtProperty "a" (TypeMismatch "Int" "Undefined")) Nil))
       isRight (result :: E MyTest) `shouldEqual` false
-    
+
     it "works with missing Maybe fields by setting them to Nothing" do
       let result = handleJSON "{}"
       (writeJSON <$> (result :: E MyTestMaybe)) `shouldEqual` (Right """{"a":null}""")
@@ -115,7 +121,10 @@ main = run [consoleReporter] do
       """
     it "works with Maybe field and null value" $ roundtrips (Proxy :: Proxy MyTestMaybe) """
         { "a": null }
-      """ 
+      """
     it "works with many Maybe fields" $ roundtrips (Proxy :: Proxy MyTestManyMaybe) """
       { "a": "str", "aNull": null, "b":1, "bNull": null, "c":true, "cNull":null, "d":1.1, "dNull":null, "e":["str1", "str2", null], "eNull": null }
-    """ 
+    """
+    it "works with Nullable" $ roundtrips (Proxy :: Proxy MyTestNullable) """
+      { "a": null, "b": "a" }
+    """
