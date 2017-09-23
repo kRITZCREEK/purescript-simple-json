@@ -102,6 +102,13 @@ main = run [consoleReporter] do
       let result = handleJSON "{}"
       (writeJSON <$> (result :: E MyTestMaybe)) `shouldEqual` (Right """{"a":null}""")
 
+    it "fails with undefined for null with correct error message" do
+      let result = handleJSON """
+        { "a": "asdf" }
+      """
+      (unsafePartial $ fromLeft result) `shouldEqual`
+        (NonEmptyList (NonEmpty (ErrorAtProperty "b" (TypeMismatch "Nullable String" "Undefined")) Nil))
+      isRight (result :: E MyTestNullable) `shouldEqual` false
 
   describe "roundtrips" do
     it "works with proper JSON" $ roundtrips (Proxy :: Proxy MyTest) """

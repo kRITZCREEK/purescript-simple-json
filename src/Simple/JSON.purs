@@ -20,7 +20,7 @@ module Simple.JSON (
 import Prelude
 
 import Control.Monad.Except (withExcept)
-import Data.Foreign (F, Foreign, ForeignError(ErrorAtProperty), readArray, readBoolean, readChar, readInt, readNumber, readString, toForeign)
+import Data.Foreign (F, Foreign, ForeignError(..), readArray, readBoolean, readChar, readInt, readNull, readNumber, readString, toForeign)
 import Data.Foreign.Index (readProp)
 import Data.Foreign.Internal (readStrMap)
 import Data.Foreign.JSON (parseJSON)
@@ -32,7 +32,7 @@ import Data.Record.Builder (Builder)
 import Data.Record.Builder as Builder
 import Data.StrMap as StrMap
 import Data.Symbol (class IsSymbol, SProxy(..), reflectSymbol)
-import Data.Traversable (sequence)
+import Data.Traversable (sequence, traverse)
 import Global.Unsafe (unsafeStringify)
 import Type.Row (class RowLacks, class RowToList, Cons, Nil, RLProxy(RLProxy), kind RowList)
 
@@ -96,7 +96,12 @@ instance readMaybe :: ReadForeign a => ReadForeign (Maybe a) where
   readImpl = map unNullOrUndefined <<< readImpl
 
 instance readNullable :: ReadForeign a => ReadForeign (Nullable a) where
-  readImpl = map toNullable <<< readImpl
+  readImpl o = withExcept (map reformat) $
+    map toNullable <$> traverse readImpl =<< readNull o
+    where
+      reformat error = case error of
+        TypeMismatch inner other -> TypeMismatch ("Nullable " <> inner) other
+        _ -> error
 
 instance readStrMap :: ReadForeign a => ReadForeign (StrMap.StrMap a) where
   readImpl = sequence <<< StrMap.mapWithKey (const readImpl) <=< readStrMap
